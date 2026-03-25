@@ -1,0 +1,601 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HireFlow — Real-time Job Tracker</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/7.0.5/signalr.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: #0f172a;
+            color: #e2e8f0;
+            min-height: 100vh;
+        }
+
+        /* Navbar */
+        .navbar {
+            background: #1e293b;
+            padding: 16px 32px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid #334155;
+        }
+
+        .logo {
+            font-size: 22px;
+            font-weight: 700;
+            color: #6366f1;
+            letter-spacing: -0.5px;
+        }
+
+            .logo span {
+                color: #e2e8f0;
+            }
+
+        .connection-badge {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            padding: 6px 14px;
+            border-radius: 20px;
+            background: #0f172a;
+            border: 1px solid #334155;
+        }
+
+        .dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #ef4444;
+        }
+
+            .dot.connected {
+                background: #22c55e;
+                animation: pulse 2s infinite;
+            }
+
+        @keyframes pulse {
+            0%, 100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.4;
+            }
+        }
+
+        /* Layout */
+        .container {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 32px 20px;
+            display: grid;
+            grid-template-columns: 1fr 380px;
+            gap: 24px;
+        }
+
+        /* Cards */
+        .card {
+            background: #1e293b;
+            border-radius: 12px;
+            border: 1px solid #334155;
+            overflow: hidden;
+        }
+
+        .card-header {
+            padding: 18px 24px;
+            border-bottom: 1px solid #334155;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .card-title {
+            font-size: 15px;
+            font-weight: 600;
+            color: #f1f5f9;
+        }
+
+        .card-body {
+            padding: 24px;
+        }
+
+        /* Connect section */
+        .connect-section {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 24px;
+        }
+
+        .input {
+            flex: 1;
+            padding: 10px 14px;
+            background: #0f172a;
+            border: 1px solid #334155;
+            border-radius: 8px;
+            color: #e2e8f0;
+            font-size: 14px;
+            outline: none;
+        }
+
+            .input:focus {
+                border-color: #6366f1;
+            }
+
+        .btn {
+            padding: 10px 20px;
+            border-radius: 8px;
+            border: none;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+
+            .btn:hover {
+                opacity: 0.85;
+            }
+
+        .btn-primary {
+            background: #6366f1;
+            color: white;
+        }
+
+        .btn-sm {
+            padding: 6px 12px;
+            font-size: 12px;
+            background: #334155;
+            color: #94a3b8;
+        }
+
+        /* Applications list */
+        .applications {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .app-card {
+            background: #0f172a;
+            border: 1px solid #334155;
+            border-radius: 10px;
+            padding: 16px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            transition: border-color 0.3s;
+        }
+
+            .app-card.highlight {
+                border-color: #6366f1;
+            }
+
+        .company-logo {
+            width: 44px;
+            height: 44px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            font-weight: 700;
+            flex-shrink: 0;
+        }
+
+        .app-info {
+            flex: 1;
+        }
+
+        .app-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: #f1f5f9;
+        }
+
+        .app-company {
+            font-size: 12px;
+            color: #94a3b8;
+            margin-top: 2px;
+        }
+
+        .status-badge {
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .status-applied {
+            background: #1e3a5f;
+            color: #60a5fa;
+        }
+
+        .status-reviewed {
+            background: #1e3a5f;
+            color: #60a5fa;
+        }
+
+        .status-shortlisted {
+            background: #14532d;
+            color: #4ade80;
+        }
+
+        .status-interview {
+            background: #3b1f6b;
+            color: #c084fc;
+        }
+
+        .status-rejected {
+            background: #450a0a;
+            color: #f87171;
+        }
+
+        .status-offered {
+            background: #14532d;
+            color: #4ade80;
+        }
+
+        /* Notification feed */
+        .notification-feed {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            max-height: 520px;
+            overflow-y: auto;
+        }
+
+        .notif-item {
+            background: #0f172a;
+            border: 1px solid #334155;
+            border-radius: 10px;
+            padding: 14px;
+            border-left: 3px solid #334155;
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateX(20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        .notif-item.shortlisted {
+            border-left-color: #22c55e;
+        }
+
+        .notif-item.reviewed {
+            border-left-color: #6366f1;
+        }
+
+        .notif-item.interview {
+            border-left-color: #a855f7;
+        }
+
+        .notif-item.rejected {
+            border-left-color: #ef4444;
+        }
+
+        .notif-item.offered {
+            border-left-color: #f59e0b;
+        }
+
+        .notif-company {
+            font-size: 13px;
+            font-weight: 600;
+            color: #f1f5f9;
+        }
+
+        .notif-message {
+            font-size: 12px;
+            color: #94a3b8;
+            margin-top: 4px;
+        }
+
+        .notif-time {
+            font-size: 11px;
+            color: #475569;
+            margin-top: 6px;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: #475569;
+            font-size: 13px;
+        }
+
+        /* Toast */
+        .toast-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            z-index: 1000;
+        }
+
+        .toast {
+            background: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 10px;
+            padding: 14px 18px;
+            min-width: 300px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+            animation: toastIn 0.3s ease;
+            border-left: 4px solid #6366f1;
+        }
+
+        @keyframes toastIn {
+            from {
+                opacity: 0;
+                transform: translateX(40px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        .toast.shortlisted {
+            border-left-color: #22c55e;
+        }
+
+        .toast.rejected {
+            border-left-color: #ef4444;
+        }
+
+        .toast.interview {
+            border-left-color: #a855f7;
+        }
+
+        .toast.offered {
+            border-left-color: #f59e0b;
+        }
+
+        .toast-title {
+            font-size: 13px;
+            font-weight: 600;
+            color: #f1f5f9;
+        }
+
+        .toast-body {
+            font-size: 12px;
+            color: #94a3b8;
+            margin-top: 4px;
+        }
+
+        .badge-count {
+            background: #6366f1;
+            color: white;
+            border-radius: 10px;
+            padding: 2px 8px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Navbar -->
+    <nav class="navbar">
+        <div class="logo">Hire<span>Flow</span></div>
+        <div style="display:flex;align-items:center;gap:12px">
+            <input class="input" id="userId"
+                   placeholder="Your candidate ID"
+                   value="candidate_1"
+                   style="width:180px;margin:0" />
+            <button class="btn btn-primary" onclick="connect()">Connect</button>
+            <div class="connection-badge">
+                <div class="dot" id="dot"></div>
+                <span id="connStatus">Disconnected</span>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Toast container -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <!-- Main layout -->
+    <div class="container">
+
+        <!-- Left: Applications -->
+        <div>
+            <div class="card">
+                <div class="card-header">
+                    <span class="card-title">My Applications</span>
+                    <span class="badge-count" id="appCount">4</span>
+                </div>
+                <div class="card-body">
+                    <div class="applications" id="applicationsList">
+
+                        <div class="app-card" id="app-google">
+                            <div class="company-logo" style="background:#1a1a2e;color:#4285f4">G</div>
+                            <div class="app-info">
+                                <div class="app-title">Software Engineer III</div>
+                                <div class="app-company">Google · Bengaluru</div>
+                            </div>
+                            <span class="status-badge status-applied" id="status-google">Applied</span>
+                        </div>
+
+                        <div class="app-card" id="app-microsoft">
+                            <div class="company-logo" style="background:#1a1a2e;color:#00a4ef">M</div>
+                            <div class="app-info">
+                                <div class="app-title">.NET Backend Developer</div>
+                                <div class="app-company">Microsoft · Hyderabad</div>
+                            </div>
+                            <span class="status-badge status-applied" id="status-microsoft">Applied</span>
+                        </div>
+
+                        <div class="app-card" id="app-amazon">
+                            <div class="company-logo" style="background:#1a1a2e;color:#ff9900">A</div>
+                            <div class="app-info">
+                                <div class="app-title">Cloud Solutions Architect</div>
+                                <div class="app-company">Amazon · Pune</div>
+                            </div>
+                            <span class="status-badge status-applied" id="status-amazon">Applied</span>
+                        </div>
+
+                        <div class="app-card" id="app-flipkart">
+                            <div class="company-logo" style="background:#1a1a2e;color:#2874f0">F</div>
+                            <div class="app-info">
+                                <div class="app-title">Senior Backend Engineer</div>
+                                <div class="app-company">Flipkart · Bengaluru</div>
+                            </div>
+                            <span class="status-badge status-applied" id="status-flipkart">Applied</span>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right: Notification feed -->
+        <div>
+            <div class="card">
+                <div class="card-header">
+                    <span class="card-title">Live Updates</span>
+                    <span class="badge-count" id="notifCount">0</span>
+                </div>
+                <div class="card-body" style="padding:16px">
+                    <div class="notification-feed" id="notifFeed">
+                        <div class="empty-state" id="emptyState">
+                            Connect to start receiving live updates
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        let connection = null;
+        let notifCount = 0;
+
+        const statusConfig = {
+            'Reviewed': { cls: 'reviewed', badge: 'status-reviewed', label: 'Reviewed' },
+            'Shortlisted': { cls: 'shortlisted', badge: 'status-shortlisted', label: 'Shortlisted' },
+            'InterviewScheduled': { cls: 'interview', badge: 'status-interview', label: 'Interview' },
+            'Rejected': { cls: 'rejected', badge: 'status-rejected', label: 'Rejected' },
+            'OfferReceived': { cls: 'offered', badge: 'status-offered', label: 'Offer!' }
+        };
+
+        // Map userId to company app card
+        const userCompanyMap = {
+            'candidate_google': 'google',
+            'candidate_microsoft': 'microsoft',
+            'candidate_amazon': 'amazon',
+            'candidate_flipkart': 'flipkart'
+        };
+
+        async function connect() {
+            const userId = document.getElementById('userId').value.trim();
+            if (!userId) return;
+
+            connection = new signalR.HubConnectionBuilder()
+                .withUrl("/hubs/notifications")
+                .withAutomaticReconnect()
+                .build();
+
+            connection.on("ReceiveNotification", function (notification) {
+                handleNotification(notification);
+            });
+
+            connection.onreconnecting(() => {
+                setStatus(false, 'Reconnecting...');
+            });
+            connection.onreconnected(() => {
+                setStatus(true, userId);
+            });
+
+            try {
+                await connection.start();
+                await connection.invoke("JoinUserGroup", userId);
+                setStatus(true, userId);
+            } catch (err) {
+                console.error("Connection failed:", err);
+            }
+        }
+
+        function setStatus(connected, label) {
+            document.getElementById('dot').className = 'dot' + (connected ? ' connected' : '');
+            document.getElementById('connStatus').innerText = connected ? label : 'Disconnected';
+        }
+
+        function handleNotification(n) {
+            const cfg = statusConfig[n.status] || { cls: 'reviewed', badge: 'status-reviewed', label: n.status };
+
+            // Update application card status badge
+            const company = userCompanyMap[n.userId];
+            if (company) {
+                const badge = document.getElementById('status-' + company);
+                if (badge) {
+                    badge.className = 'status-badge ' + cfg.badge;
+                    badge.innerText = cfg.label;
+                }
+                const card = document.getElementById('app-' + company);
+                if (card) {
+                    card.classList.add('highlight');
+                    setTimeout(() => card.classList.remove('highlight'), 2000);
+                }
+            }
+
+            // Add to notification feed
+            addToFeed(n, cfg);
+
+            // Show toast
+            showToast(n, cfg);
+
+            // Update counter
+            notifCount++;
+            document.getElementById('notifCount').innerText = notifCount;
+        }
+
+        function addToFeed(n, cfg) {
+            const feed = document.getElementById('notifFeed');
+            const empty = document.getElementById('emptyState');
+            if (empty) empty.remove();
+
+            const item = document.createElement('div');
+            item.className = 'notif-item ' + cfg.cls;
+            item.innerHTML = `
+                <div class="notif-company">${n.companyName} · ${n.jobTitle}</div>
+                <div class="notif-message">${n.message}</div>
+                <div class="notif-time">${new Date(n.timestamp).toLocaleTimeString()}</div>
+            `;
+            feed.insertBefore(item, feed.firstChild);
+        }
+
+        function showToast(n, cfg) {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = 'toast ' + cfg.cls;
+            toast.innerHTML = `
+                <div class="toast-title">${n.companyName} updated your application</div>
+                <div class="toast-body">${n.message}</div>
+            `;
+            container.appendChild(toast);
+            setTimeout(() => toast.remove(), 4000);
+        }
+    </script>
+</body>
+</html>
